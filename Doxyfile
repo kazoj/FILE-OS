@@ -1,0 +1,42 @@
+# Doxyfile — Configuration Doxygen pour le simulateur d'ordonnancement
+# Générer la doc : make doc  (ou doxygen Doxyfile)
+
+PROJECT_NAME           = "Simulateur d'Ordonnancement de Processus"
+PROJECT_NUMBER         = "1.0"
+PROJECT_BRIEF          = "Simulateur pédagogique d'algorithmes d'ordonnancement OS (L3 Informatique)"
+OUTPUT_DIRECTORY       = docs
+CREATE_SUBDIRS         = NO
+OUTPUT_LANGUAGE        = French
+
+# Sources à documenter
+INPUT                  = include src
+FILE_PATTERNS          = *.h *.c
+RECURSIVE              = YES
+EXCLUDE                =
+
+# Extraction
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = YES
+
+# HTML
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+HTML_COLORSTYLE        = AUTO_LIGHT
+GENERATE_TREEVIEW      = YES
+
+# LaTeX (désactivé)
+GENERATE_LATEX         = NO
+
+# Graphes de dépendances (nécessite graphviz)
+HAVE_DOT               = NO
+CALL_GRAPH             = NO
+CALLER_GRAPH           = NO
+
+# Avertissements
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+
+# Tri
+SORT_MEMBER_DOCS       = YES
+SORT_BRIEF_DOCS        = YES

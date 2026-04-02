@@ -1,0 +1,27 @@
+# Jeu de test avec E/S parallélisées
+# 4 processus avec des cycles CPU + I/O
+# Bon pour vérifier la gestion des états BLOCKED et le Gantt
+
+quantum 50
+
+process 1 "WebServer" arrival=0 priority=2
+    burst cpu=200 io=100
+    burst cpu=150 io=50
+    burst cpu=100
+end
+
+process 2 "Compiler" arrival=10 priority=1
+    burst cpu=300 io=200
+    burst cpu=200
+end
+
+process 3 "Shell" arrival=0 priority=3
+    burst cpu=50 io=80
+    burst cpu=50 io=80
+    burst cpu=50
+end
+
+process 4 "Daemon" arrival=5 priority=1
+    burst cpu=80 io=150
+    burst cpu=80
+end

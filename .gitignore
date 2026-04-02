@@ -1,0 +1,24 @@
+# Build artifacts
+build/
+scheduler
+
+# Generated output files
+*.csv
+*.png
+
+# Doxygen generated docs
+docs/html/
+docs/latex/
+
+# Claude / AI files
+CLAUDE.md
+claude.md
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+*.swp
+*.swo
+*~
