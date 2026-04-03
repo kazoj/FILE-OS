@@ -30,9 +30,9 @@ Avant de compiler, assurez-vous d'avoir les outils suivants. Les deux premiers s
 |---|---|---|
 | `gcc` ≥ 9 | Compiler le code C du simulateur | Oui |
 | `make` | Lancer les commandes de build | Oui |
-| `gtk4` | Afficher l'interface graphique desktop (option `-G`) | Non |
+| `gtk4` | Afficher l'interface graphique desktop (option `--gui`) | Non |
 | `doxygen` | Générer la documentation HTML du code | Non |
-| `python3` + `matplotlib` | Générer des graphiques PNG (option `-P`) | Non |
+| `python3` + `matplotlib` | Générer des graphiques PNG (option `--plot`) | Non |
 
 **Debian / Ubuntu :**
 ```bash
@@ -96,75 +96,143 @@ Le Makefile choisit automatiquement où installer selon vos droits :
 
 Pour vérifier que tout fonctionne :
 ```bash
-scheduler -l
+scheduler list
 ```
 
 ---
 
 ## 4. Utilisation rapide
 
-Il y a deux façons de passer des processus au simulateur : directement en ligne de commande, ou via un fichier `.sim`.
+Le simulateur supporte deux syntaxes : une interface en **sous-commandes** (recommandée) et l'ancienne syntaxe à flags courts (toujours supportée).
 
-### Option A : processus en ligne de commande
+### Sous-commandes disponibles
 
-Chaque argument représente un processus. Vous décrivez ses cycles CPU et E/S dans une chaîne de la forme :
+| Sous-commande | Description |
+|---|---|
+| `run <algo>` | Lancer une simulation |
+| `list` | Lister les algorithmes disponibles |
+| `help [cmd]` | Afficher l'aide d'une sous-commande |
+| `interactive` | Mode guidé interactif |
 
-```
-"<cpu_ms>,<io_ms>,<cpu_ms>,..."
-```
-
-Le premier nombre est un burst CPU, le suivant une pause E/S, etc. Si le processus ne fait que du CPU, donnez juste un seul nombre.
-
-```bash
-# 3 processus purement CPU, algorithme FIFO
-./scheduler -a fifo "200" "300" "150"
-
-# 3 processus avec E/S, algorithme SRJF, Gantt ASCII
-./scheduler -a srjf -g "200,50,100" "300" "150,30,50"
-
-# Round Robin avec un quantum de 100 ms
-./scheduler -a rr -q 100 "200,50,100" "300"
-```
-
-### Option B : fichier `.sim`
-
-Pour des jeux de test plus réalistes, écrivez vos processus dans un fichier (voir [section 6](#6-format-du-fichier-sim)) et passez-le avec `-f` :
+### Option A : depuis un fichier `.sim` (recommandé pour les jeux de test)
 
 ```bash
-# Jeu de test simple (3 processus sans E/S)
+# Simulation FIFO avec Gantt ASCII
+./scheduler run fifo tests/sample_inputs/basic.sim --gantt
+
+# Round Robin, quantum 50 ms, Gantt + graphiques PNG
+./scheduler run rr tests/sample_inputs/io_heavy.sim --quantum 50 --gantt --plot
+
+# IHM desktop GTK4
+./scheduler run rr tests/sample_inputs/io_heavy.sim --gui
+```
+
+Le fichier `.sim` est détecté automatiquement à l'extension — pas besoin de `-f`.
+
+### Option B : processus en ligne de commande (--process)
+
+Définissez chaque processus avec `--process "Nom:cpu=<ms>[,io=<ms>,cpu=<ms>...]"` :
+
+```bash
+# 2 processus purement CPU
+./scheduler run fifo --process "P1:cpu=200" --process "P2:cpu=300"
+
+# Processus avec E/S alternées, SRJF, Gantt
+./scheduler run srjf --gantt \
+    --process "P1:cpu=200,io=50,cpu=100" \
+    --process "P2:cpu=300" \
+    --process "P3:cpu=150,io=30,cpu=50"
+
+# Round Robin quantum 100 ms
+./scheduler run rr --quantum 100 \
+    --process "Client:cpu=200,io=50,cpu=100" \
+    --process "Server:cpu=300"
+```
+
+### Option C : mode interactif guidé
+
+Si vous ne savez pas encore quelle commande utiliser, lancez simplement :
+
+```bash
+./scheduler interactive
+# ou sans argument :
+./scheduler
+```
+
+L'assistant vous posera des questions (algorithme, quantum, fichier ou processus manuels, options de sortie) et lancera la simulation.
+
+### Option D : ancienne syntaxe (rétrocompatibilité)
+
+L'ancienne syntaxe à flags courts est toujours valide :
+
+```bash
 ./scheduler -a fifo -g -f tests/sample_inputs/basic.sim
-
-# Jeu de test avec E/S, Gantt + graphiques PNG
-./scheduler -a rr -g -P -f tests/sample_inputs/io_heavy.sim
-
-# IHM desktop GTK4 (si compilé avec GTK4)
-./scheduler -a rr -G -f tests/sample_inputs/io_heavy.sim
+./scheduler -a rr -q 50 -g -P -f tests/sample_inputs/io_heavy.sim
+./scheduler -a srjf -g "200,50,100" "300" "150,30,50"
 ```
 
 ---
 
 ## 5. Options de la ligne de commande
 
+### Syntaxe principale (sous-commande `run`)
+
+```
+scheduler run <algo> [options] [fichier.sim]
+```
+
+| Option | Argument | Description |
+|---|---|---|
+| `--quantum` / `-q` | entier (ms) | Quantum pour Round Robin (défaut : `50`). |
+| `--output` / `-o` | chemin `.csv` | Nom du fichier CSV de sortie (défaut : auto). |
+| `--gantt` / `-g` | — | Afficher le diagramme de Gantt ASCII. |
+| `--gui` / `-G` | — | Ouvrir l'interface graphique GTK4 (nécessite GTK4). |
+| `--plot` / `-P` | — | Générer des graphiques PNG (nécessite Python + matplotlib). |
+| `--sequential-io` / `-S` | — | E/S séquentielles : les entrées/sorties bloquent le CPU. |
+| `--verbose` / `-v` | — | Mode verbeux : liste les processus chargés avant simulation. |
+| `--process` | spec | Ajouter un processus. Format : `"[Nom:]cpu=<ms>[,io=<ms>,cpu=<ms>...]"` |
+| `-h` / `--help` | — | Afficher l'aide de `run` et quitter. |
+
+Le fichier `.sim` peut être passé comme argument positionnel (détection automatique par l'extension `.sim`).
+
+> Si votre fichier `.sim` contient une directive `quantum`, elle prend la priorité sur `--quantum` — sauf si vous passez `--quantum` explicitement.
+
+### Format de `--process`
+
+Chaque spec décrit un processus complet : un préfixe de nom optionnel suivi de paires `clé=valeur` séparées par des virgules.
+
+```
+"[Nom:]cpu=<ms>[,io=<ms>,cpu=<ms>...]"
+```
+
+| Token | Description |
+|---|---|
+| `Nom:` | Nom optionnel du processus (ex: `WebServer:`) |
+| `cpu=<ms>` | Durée d'un burst CPU (obligatoire, au moins un) |
+| `io=<ms>` | Durée de l'E/S qui suit le burst CPU précédent |
+
+Exemples valides :
+```
+"cpu=200"                           → 1 burst CPU, pas d'E/S
+"P1:cpu=200,io=50,cpu=100"          → burst 200ms CPU, 50ms E/S, 100ms CPU
+"WebServer:cpu=150,io=80,cpu=100,io=40,cpu=50"
+```
+
+### Syntaxe legacy (rétrocompatibilité)
+
 ```
 scheduler -a <algo> [options] [<burst_spec>...]
 scheduler -a <algo> [options] -f <fichier.sim>
 ```
 
-| Option | Argument | Description |
-|---|---|---|
-| `-a <algo>` | `fifo` `sjf` `srjf` `rr` | **Obligatoire.** Choix de l'algorithme d'ordonnancement. |
-| `-f <fichier>` | chemin `.sim` | Charger les processus depuis un fichier au lieu de la ligne de commande. |
-| `-q <quantum>` | entier (ms) | Durée du quantum pour Round Robin (défaut : `50`). |
-| `-o <fichier>` | chemin `.csv` | Nom du fichier CSV de sortie (défaut : généré automatiquement). |
-| `-g` | — | Afficher le diagramme de Gantt ASCII dans le terminal. |
-| `-G` | — | Ouvrir l'interface graphique GTK4 (nécessite GTK4). |
-| `-P` | — | Générer des graphiques PNG (nécessite Python + matplotlib). |
-| `-S` | — | Mode E/S séquentielles : les entrées/sorties bloquent le CPU. |
-| `-v` | — | Mode verbeux : affiche la liste des processus chargés avant la simulation. |
-| `-l` | — | Lister les algorithmes disponibles et quitter. |
-| `-h` | — | Afficher l'aide et quitter. |
-
-> Si votre fichier `.sim` contient une directive `quantum`, elle prend la priorité sur `-q` — sauf si vous passez `-q` explicitement.
+| Option | Description |
+|---|---|
+| `-a <algo>` | **Obligatoire.** Algorithme : `fifo`, `sjf`, `srjf`, `rr`. |
+| `-f <fichier>` | Fichier `.sim` d'entrée. |
+| `-q <ms>` | Quantum Round Robin. |
+| `-o <fichier>` | Sortie CSV. |
+| `-g` `-G` `-P` `-S` `-v` | Identiques aux options longues ci-dessus. |
+| `-l` | Lister les algorithmes et quitter. |
 
 ---
 
@@ -266,6 +334,8 @@ end
 Pour voir la liste des algorithmes disponibles à l'exécution :
 
 ```bash
+./scheduler list
+# ou (legacy) :
 ./scheduler -l
 ```
 
@@ -293,12 +363,12 @@ MOY                                   ...      ...     ...
 Utilisation CPU : 87.3 %
 ```
 
-### Diagramme de Gantt ASCII (option `-g`)
+### Diagramme de Gantt ASCII (option `--gantt`)
 
 Un diagramme de Gantt montre la timeline de chaque processus : quand il utilise le CPU, quand il attend, quand il fait des E/S. C'est la meilleure façon de visualiser le comportement de l'ordonnanceur.
 
 ```bash
-./scheduler -a rr -q 50 -g -f tests/sample_inputs/io_heavy.sim
+./scheduler run rr tests/sample_inputs/io_heavy.sim --quantum 50 --gantt
 ```
 
 Produit une ligne de timeline par processus dans le terminal, avec les états CPU, IDLE et BLOCKED visibles.
@@ -310,7 +380,7 @@ Un fichier CSV est **toujours créé** après une simulation réussie. Le nom pa
 Pour choisir le nom vous-même :
 
 ```bash
-./scheduler -a rr -f tests/sample_inputs/io_heavy.sim -o resultats_rr.csv
+./scheduler run rr tests/sample_inputs/io_heavy.sim --output resultats_rr.csv
 ```
 
 **Structure du CSV :**
@@ -325,7 +395,7 @@ pid,name,arrival_ms,finish_ms,turnaround_ms,wait_ms,response_ms
 MOY,,,,350,245,18
 ```
 
-### Interface graphique GTK4 (option `-G`)
+### Interface graphique GTK4 (option `--gui`)
 
 Si vous avez compilé avec GTK4, cette option ouvre une fenêtre native avec :
 
@@ -341,12 +411,12 @@ Le programme attend que vous fermiez la fenêtre avant de rendre la main au term
 
 Vous pouvez générer des graphiques PNG à partir des résultats de simulation. Deux modes sont disponibles.
 
-### Mode immédiat (`-P`)
+### Mode immédiat (`--plot`)
 
 Génère les PNG directement après la simulation :
 
 ```bash
-./scheduler -a rr -q 50 -g -P -f tests/sample_inputs/io_heavy.sim
+./scheduler run rr tests/sample_inputs/io_heavy.sim --quantum 50 --gantt --plot
 ```
 
 Produit dans le dossier courant :
@@ -449,7 +519,7 @@ SRCS = ...
 
 ```bash
 make clean && make
-./scheduler -a mon -f tests/sample_inputs/basic.sim -g
+./scheduler run mon tests/sample_inputs/basic.sim --gantt
 ```
 
 ---

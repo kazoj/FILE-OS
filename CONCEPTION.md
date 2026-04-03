@@ -448,13 +448,41 @@ Les temps d'attente sont accumulés dans `pcb_transition()` : lorsqu'un processu
 
 ### Entrée — `src/input.c`
 
-Deux modes :
+#### Interface CLI : deux syntaxes coexistantes
 
-**a) Fichier `.sim`** : parsé ligne par ligne avec `sscanf`.  
-Mots-clés reconnus : `quantum`, `process`, `burst`, `end`, `#` (commentaire).
+`cli_parse()` détecte le mode en regardant `argv[1]` :
 
-**b) Arguments CLI** : les processus sont définis par leurs durées CPU passées en arguments positionnels après les options.  
-Format : `"200"` (CPU seul) ou `"200,50,100"` (cpu=200, io=50, cpu=100).
+- Si `argv[1]` ne commence pas par `-` → **mode sous-commandes**
+- Sinon → **mode legacy** (rétrocompatibilité, comportement inchangé)
+
+**Sous-commandes reconnues :**
+
+| Sous-commande | Action |
+|---|---|
+| `run <algo> [opts] [fichier.sim]` | Lance une simulation |
+| `list` | Affiche les algorithmes disponibles |
+| `help [cmd]` | Aide contextuelle |
+| `interactive` | Wizard guidé sur stdin |
+
+La sous-commande est stockée dans `CLIConfig.subcommand`. `main.c` dispatche avant d'entrer dans la boucle de simulation. La fonction interne `parse_one_option()` centralise le parsing des options communes (`--gantt`, `--quantum`, `--gui`, etc.) pour éviter la duplication entre les deux modes.
+
+#### Sources de processus (ordre de priorité)
+
+**a) Fichier `.sim`** (`cfg.input_file != NULL`) — parsé ligne par ligne.  
+Mots-clés reconnus : `quantum`, `process`, `burst`, `end`, `#` (commentaire).  
+En mode sous-commandes, le fichier `.sim` est reconnu automatiquement comme argument positionnel (pas besoin de `-f`).
+
+**b) Specs `--process`** (`cfg.process_count > 0`) — format `"[Nom:]cpu=<ms>[,io=<ms>,cpu=<ms>...]"`.  
+Parsées par `input_from_process_args()` : préfixe `Nom:` extrait si présent avant le premier `=`, puis tokens `cpu=` / `io=` traités séquentiellement.
+
+**c) Arguments positionnels legacy** — format implicite `"cpu[,io,cpu,...]"`.  
+Parsés par `input_from_cli()` (alternance pair=CPU, impair=E/S).
+
+#### Mode interactif — `cli_interactive()`
+
+Wizard textuel sur `stdin` qui complète `CLIConfig` par questions/réponses. Déclenché par `./scheduler interactive` ou `./scheduler` sans argument. Après retour, le flux rejoint celui d'une commande `run` normale.
+
+Séquence : algorithme → quantum (si RR) → fichier `.sim` ou saisie manuelle des processus → options Gantt / PNG.
 
 La fonction d'entrée retourne un tableau `Process[]` alloué sur le tas. Ce tableau reste valide pendant toute la durée de la simulation.
 
@@ -472,7 +500,7 @@ La fonction d'entrée retourne un tableau `Process[]` alloué sur le tas. Ce tab
 
 ### IHM GTK4 — `src/output_gtk.c`
 
-Compilé seulement si `HAVE_GTK4` est défini par le Makefile (détection automatique via `pkg-config`). Activé par le flag `-G`.
+Compilé seulement si `HAVE_GTK4` est défini par le Makefile (détection automatique via `pkg-config`). Activé par `--gui` (ou `-G` en mode legacy).
 
 **Layout :**
 - Panneau gauche : informations de simulation (algo, quantum, métriques moyennes).

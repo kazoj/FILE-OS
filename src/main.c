@@ -33,13 +33,35 @@ int main(int argc, char **argv)
     int parse_rc = cli_parse(argc, argv, &cfg);
 
     if (parse_rc == -2) {
-        /* Option -l : lister les algos */
+        /* Option -l (legacy) : lister les algos */
         printf("Algorithmes disponibles : ");
         scheduler_list_available();
         return 0;
     }
     if (parse_rc != 0) {
         return 1;
+    }
+
+    /* ---------------------------------------------------------------- */
+    /*  Dispatch des sous-commandes                                     */
+    /* ---------------------------------------------------------------- */
+
+    if (cfg.subcommand) {
+        if (strcmp(cfg.subcommand, "list") == 0) {
+            printf("Algorithmes disponibles : ");
+            scheduler_list_available();
+            return 0;
+        }
+        if (strcmp(cfg.subcommand, "help") == 0) {
+            cli_usage_subcommand(argv[0], cfg.subcommand_arg);
+            return 0;
+        }
+        if (strcmp(cfg.subcommand, "interactive") == 0) {
+            if (cli_interactive(&cfg) != 0)
+                return 1;
+            /* cfg est maintenant rempli, on continue vers la simulation */
+        }
+        /* Pour "run" : cfg->algo est déjà défini, on continue normalement */
     }
 
     /* ---------------------------------------------------------------- */
@@ -51,41 +73,43 @@ int main(int argc, char **argv)
     uint32_t file_quantum = 0;
 
     if (cfg.input_file) {
+        /* Chargement depuis un fichier .sim */
         if (input_load_file(cfg.input_file, &procs, &n, &file_quantum) != 0) {
             fprintf(stderr, "Erreur lors du chargement de '%s'\n",
                     cfg.input_file);
             return 1;
         }
-        /* Le quantum du fichier surcharge le défaut CLI si non spécifié */
+        /* Le quantum du fichier surcharge le défaut CLI si non modifié */
         if (file_quantum > 0 && cfg.quantum_ms == 50) {
             cfg.quantum_ms = file_quantum;
         }
+    } else if (cfg.process_count > 0) {
+        /* Chargement depuis les specs --process "P1:cpu=200,io=50,..." */
+        if (input_from_process_args(
+                (const char **)cfg.process_specs, cfg.process_count,
+                &procs, &n) != 0) {
+            return 1;
+        }
     } else {
-        /* Processus depuis les arguments restants (non reconnus par cli_parse) */
-        /* Rechercher les arguments positionnels restants après options */
-        int    first_proc_arg = 0;
-        char **proc_argv      = NULL;
-        int    proc_argc      = 0;
+        /* Mode legacy : processus depuis les arguments positionnels restants */
+        char **proc_argv = NULL;
+        int    proc_argc = 0;
 
         for (int i = 1; i < argc; i++) {
             if (argv[i][0] != '-') {
-                if (!proc_argv) {
-                    proc_argv   = &argv[i];
-                    first_proc_arg = i;
-                }
+                if (!proc_argv) proc_argv = &argv[i];
                 proc_argc++;
             } else if (argv[i][1] == 'a' || argv[i][1] == 'q' ||
                        argv[i][1] == 'f' || argv[i][1] == 'o') {
-                i++; /* sauter la valeur */
+                i++; /* sauter la valeur de l'option */
             }
         }
-        (void)first_proc_arg;
 
         if (proc_argc == 0) {
             fprintf(stderr,
-                "Aucun processus fourni. Utilisez -f <fichier.sim> ou "
-                "spécifiez des bursts en argument.\n");
-            cli_usage(argv[0]);
+                "Aucun processus fourni.\n"
+                "Utilisez 'scheduler run <algo> fichier.sim',\n"
+                "  '--process \"P1:cpu=200,...\"', ou '-f <fichier.sim>'.\n");
             return 1;
         }
 

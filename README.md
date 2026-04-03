@@ -39,44 +39,47 @@ make install  # installe dans /usr/local/bin ou $HOME/.local/bin
 
 ## Utilisation rapide
 
-### Processus en ligne de commande
-
-Chaque argument positionnel est un processus, au format `"cpu_ms,io_ms,cpu_ms,..."` :
+### Sous-commandes (interface recommandée)
 
 ```bash
-# FIFO, 3 processus purement CPU
-./scheduler -a fifo "200" "300" "150"
+# Lancer une simulation depuis un fichier .sim
+./scheduler run rr tests/sample_inputs/basic.sim --quantum 50 --gantt
 
-# SRJF avec E/S, diagramme de Gantt ASCII
-./scheduler -a srjf -g "200,50,100" "300" "150,30,50"
+# Lancer avec des processus définis en ligne de commande
+./scheduler run fifo --process "P1:cpu=200,io=50,cpu=100" --process "P2:cpu=300"
 
-# Round Robin, quantum 100 ms
-./scheduler -a rr -q 100 "200,50,100" "300"
+# Mode interactif guidé
+./scheduler interactive
+
+# Lister les algorithmes disponibles
+./scheduler list
+
+# Aide d'une sous-commande
+./scheduler help run
 ```
 
-### Depuis un fichier `.sim`
+### Ancienne syntaxe (toujours supportée)
 
 ```bash
 ./scheduler -a fifo -g -f tests/sample_inputs/basic.sim
 ./scheduler -a rr -q 50 -g -P -f tests/sample_inputs/io_heavy.sim
+./scheduler -a srjf -g "200,50,100" "300" "150,30,50"
 ```
 
 ---
 
-## Options principales
+## Options de `run`
 
 | Option | Description |
 |---|---|
-| `-a <algo>` | Algorithme (`fifo`, `sjf`, `srjf`, `rr`) — **obligatoire** |
-| `-f <fichier>` | Charger les processus depuis un fichier `.sim` |
-| `-q <ms>` | Quantum pour Round Robin (défaut : 50 ms) |
-| `-g` | Afficher le diagramme de Gantt ASCII |
-| `-G` | IHM desktop GTK4 (nécessite GTK4) |
-| `-P` | Générer les graphiques PNG (nécessite Python + matplotlib) |
-| `-S` | E/S séquentielles (non parallélisables) |
-| `-o <fichier>` | Nom du fichier CSV de sortie |
-| `-l` | Lister les algorithmes disponibles |
-| `-v` | Mode verbeux |
+| `--quantum <ms>` | Quantum pour Round Robin (défaut : 50 ms) |
+| `--gantt` | Afficher le diagramme de Gantt ASCII |
+| `--gui` | IHM desktop GTK4 (nécessite GTK4) |
+| `--plot` | Générer les graphiques PNG (nécessite Python + matplotlib) |
+| `--sequential-io` | E/S séquentielles (non parallélisables) |
+| `--verbose` | Mode verbeux |
+| `--output <fichier>` | Nom du fichier CSV de sortie |
+| `--process <spec>` | Ajouter un processus (`"[Nom:]cpu=<ms>[,io=<ms>,...]"`) |
 
 ---
 
@@ -84,9 +87,9 @@ Chaque argument positionnel est un processus, au format `"cpu_ms,io_ms,cpu_ms,..
 
 - **Table de métriques** dans le terminal (temps d'attente, turnaround, temps de réponse, taux CPU)
 - **Fichier CSV** généré automatiquement après chaque simulation (`<ALGO>_<timestamp>.csv`)
-- **Diagramme de Gantt ASCII** avec `-g`
-- **Graphiques PNG** avec `-P` (diagramme de Gantt + barres de métriques)
-- **IHM desktop GTK4** avec `-G` (fenêtre native : Gantt coloré Cairo + tableau métriques)
+- **Diagramme de Gantt ASCII** avec `--gantt`
+- **Graphiques PNG** avec `--plot` (diagramme de Gantt + barres de métriques)
+- **IHM desktop GTK4** avec `--gui` (fenêtre native : Gantt coloré Cairo + tableau métriques)
 
 ---
 
