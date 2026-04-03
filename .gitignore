@@ -10,9 +10,6 @@ scheduler
 docs/html/
 docs/latex/
 
-# Claude / AI files
-CLAUDE.md
-claude.md
 
 # macOS
 .DS_Store

@@ -1,22 +1,15 @@
-# Jeu de test de base — 3 processus sans I/O
-# Utilisé pour vérifier FIFO, SJF, SRJF, RR à la main
-#
-# Calculs attendus en FIFO :
-#   P1 : arrivée=0, fin=100 → restitution=100, attente=0,  réponse=0
-#   P2 : arrivée=0, fin=400 → restitution=400, attente=100, réponse=100
-#   P3 : arrivée=0, fin=550 → restitution=550, attente=400, réponse=400
-#   Moy restitution = 350, moy attente = 166.67, CPU util = 100%
+# Jeu de test de base — 3 processus CPU-only, arrivées décalées
 
 quantum 50
 
-process 1 "P1_Court" arrival=0 priority=1
-    burst cpu=100
+process 1 "P1_Moyen" arrival=0 priority=2
+    burst cpu=200
 end
 
-process 2 "P2_Moyen" arrival=0 priority=2
+process 2 "P2_Long" arrival=0 priority=3
     burst cpu=300
 end
 
-process 3 "P3_Long" arrival=0 priority=3
-    burst cpu=150
+process 3 "P3_Court" arrival=50 priority=1
+    burst cpu=80
 end
