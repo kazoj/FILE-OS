@@ -11,8 +11,8 @@
 #include <string.h>
 #include <time.h>
 
-#ifdef HAVE_NCURSES
-#  include "output_ncurses.h"
+#ifdef HAVE_GTK4
+#  include "output_gtk.h"
 #endif
 
 /* ------------------------------------------------------------------ */
@@ -307,21 +307,17 @@ void output_plot(const char *csv_path)
     }
 }
 
-/* ------------------------------------------------------------------ */
-/*  IHM ncurses (stub si non compilé)                                  */
-/* ------------------------------------------------------------------ */
-
-#ifndef HAVE_NCURSES
+#ifndef HAVE_GTK4
 /**
- * @brief Stub ncurses : affiché si la lib n'est pas disponible.
+ * @brief Stub GTK4 : affiché si la lib n'est pas disponible.
  */
-void output_ncurses_render(const SimulationState *sim,
-                           const MetricsReport   *report)
+void output_gtk_render(const SimulationState *sim,
+                       const MetricsReport   *report)
 {
     (void)sim; (void)report;
     fprintf(stderr,
-        "Avertissement : l'option -i requiert ncurses "
-        "(recompilez avec libncurses installée).\n");
+        "Avertissement : l'option -G requiert GTK4 "
+        "(recompilez avec GTK4 installée : brew install gtk4).\n");
 }
 #endif
 
@@ -371,9 +367,9 @@ int output_render(const SimulationState *sim,
         output_plot(csv_used);
     }
 
-    /* IHM ncurses interactive */
-    if (cfg->show_ncurses) {
-        output_ncurses_render(sim, report);
+    /* IHM GTK4 native */
+    if (cfg->show_gtk) {
+        output_gtk_render(sim, report);
     }
 
     return rc;

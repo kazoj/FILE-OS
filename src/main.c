@@ -156,7 +156,7 @@ int main(int argc, char **argv)
         .show_gantt   = cfg.show_gantt,
         .show_table   = 1,
         .csv_path     = cfg.csv_output,  /* NULL = nom automatique */
-        .show_ncurses = cfg.show_ncurses,
+        .show_gtk     = cfg.show_gtk,
         .auto_plot    = cfg.auto_plot
     };
 

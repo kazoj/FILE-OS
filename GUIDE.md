@@ -1,7 +1,7 @@
 # Guide d'installation et d'utilisation
 # Simulateur d'Ordonnancement de Processus
 
-> Destiné à un programmeur système souhaitant compiler, installer et exploiter le simulateur en environnement UNIX/Linux ou macOS.
+Ce guide vous accompagne pas à pas : de l'installation jusqu'à l'analyse des résultats. 
 
 ---
 
@@ -24,22 +24,24 @@
 
 ## 1. Prérequis
 
-| Composant | Rôle | Obligatoire |
+Avant de compiler, assurez-vous d'avoir les outils suivants. Les deux premiers sont indispensables, les autres sont optionnels selon ce que vous souhaitez faire.
+
+| Composant | À quoi ça sert ici | Obligatoire |
 |---|---|---|
-| `gcc` ≥ 9 | Compilation C11 | Oui |
-| `make` | Système de build | Oui |
-| `libncurses-dev` | IHM interactive (`-i`) | Non |
-| `doxygen` | Génération de la doc | Non |
-| `python3` + `matplotlib` | Graphiques PNG (`-P`) | Non |
+| `gcc` ≥ 9 | Compiler le code C du simulateur | Oui |
+| `make` | Lancer les commandes de build | Oui |
+| `gtk4` | Afficher l'interface graphique desktop (option `-G`) | Non |
+| `doxygen` | Générer la documentation HTML du code | Non |
+| `python3` + `matplotlib` | Générer des graphiques PNG (option `-P`) | Non |
 
 **Debian / Ubuntu :**
 ```bash
-sudo apt install gcc make libncurses-dev doxygen python3-matplotlib
+sudo apt install gcc make libgtk-4-dev doxygen python3-matplotlib
 ```
 
 **macOS (Homebrew) :**
 ```bash
-brew install gcc make ncurses doxygen python3
+brew install gcc make gtk4 doxygen python3
 pip3 install matplotlib
 ```
 
@@ -47,25 +49,25 @@ pip3 install matplotlib
 
 ## 2. Compilation
 
-### Build de production (optimisé)
+Placez-vous dans le dossier du projet et lancez `make`.
+
+### Build normal (recommandé)
 
 ```bash
 cd file-OS/
 make
 ```
 
-L'exécutable `scheduler` est produit à la racine du projet.
-
-Le Makefile détecte automatiquement la présence de ncurses et l'active si disponible :
+Cela produit un exécutable `scheduler` à la racine du projet. Le Makefile détecte automatiquement si GTK4 est disponible sur votre système et l'active si c'est le cas :
 
 ```
-[ncurses] détecté — option -i activée
+[gtk4]    détecté — option -G activée
 Exécutable : scheduler
 ```
 
 ### Build de débogage
 
-Active les symboles GDB, AddressSanitizer et UndefinedBehaviorSanitizer.
+Utile si vous voulez traquer un bug : active les symboles GDB, AddressSanitizer et UndefinedBehaviorSanitizer, qui signalent les erreurs mémoire à l'exécution.
 
 ```bash
 make debug
@@ -75,22 +77,24 @@ make debug
 
 ## 3. Installation
 
+Pour pouvoir appeler `scheduler` depuis n'importe quel dossier (sans `./`), installez-le :
+
 ```bash
 make install
 ```
 
-Le Makefile choisit automatiquement la destination :
+Le Makefile choisit automatiquement où installer selon vos droits :
 
-- Si `/usr/local/bin` est accessible en écriture → installe dans `/usr/local/bin/scheduler`
-- Sinon → installe dans `$HOME/.local/bin/scheduler`
+- Si vous avez accès à `/usr/local/bin` → installe dans `/usr/local/bin/scheduler` (disponible pour tous les utilisateurs)
+- Sinon → installe dans `$HOME/.local/bin/scheduler` (disponible pour vous uniquement)
 
-> **Note :** Si l'installation atterrit dans `$HOME/.local/bin`, vérifiez que ce répertoire est dans votre `PATH` :
+> **Si l'installation atterrit dans `$HOME/.local/bin`**, ce dossier n'est peut-être pas dans votre `PATH`. Pour l'ajouter une fois pour toutes :
 > ```bash
 > echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 > source ~/.bashrc
 > ```
 
-Vérification :
+Pour vérifier que tout fonctionne :
 ```bash
 scheduler -l
 ```
@@ -99,15 +103,17 @@ scheduler -l
 
 ## 4. Utilisation rapide
 
-### Cas simple : processus en ligne de commande
+Il y a deux façons de passer des processus au simulateur : directement en ligne de commande, ou via un fichier `.sim`.
 
-Chaque argument positionnel représente un processus. Le format d'un argument est :
+### Option A : processus en ligne de commande
+
+Chaque argument représente un processus. Vous décrivez ses cycles CPU et E/S dans une chaîne de la forme :
 
 ```
 "<cpu_ms>,<io_ms>,<cpu_ms>,..."
 ```
 
-Exemples :
+Le premier nombre est un burst CPU, le suivant une pause E/S, etc. Si le processus ne fait que du CPU, donnez juste un seul nombre.
 
 ```bash
 # 3 processus purement CPU, algorithme FIFO
@@ -116,21 +122,23 @@ Exemples :
 # 3 processus avec E/S, algorithme SRJF, Gantt ASCII
 ./scheduler -a srjf -g "200,50,100" "300" "150,30,50"
 
-# Round Robin, quantum 100 ms
+# Round Robin avec un quantum de 100 ms
 ./scheduler -a rr -q 100 "200,50,100" "300"
 ```
 
-### Cas complet : fichier `.sim`
+### Option B : fichier `.sim`
+
+Pour des jeux de test plus réalistes, écrivez vos processus dans un fichier (voir [section 6](#6-format-du-fichier-sim)) et passez-le avec `-f` :
 
 ```bash
-# Jeu de test fourni (3 processus sans E/S)
+# Jeu de test simple (3 processus sans E/S)
 ./scheduler -a fifo -g -f tests/sample_inputs/basic.sim
 
 # Jeu de test avec E/S, Gantt + graphiques PNG
 ./scheduler -a rr -g -P -f tests/sample_inputs/io_heavy.sim
 
-# IHM ncurses interactive (si compilé avec ncurses)
-./scheduler -a rr -i -f tests/sample_inputs/io_heavy.sim
+# IHM desktop GTK4 (si compilé avec GTK4)
+./scheduler -a rr -G -f tests/sample_inputs/io_heavy.sim
 ```
 
 ---
@@ -144,25 +152,25 @@ scheduler -a <algo> [options] -f <fichier.sim>
 
 | Option | Argument | Description |
 |---|---|---|
-| `-a <algo>` | `fifo` `sjf` `srjf` `rr` | **Obligatoire.** Algorithme d'ordonnancement. |
-| `-f <fichier>` | chemin `.sim` | Charger les processus depuis un fichier. |
-| `-q <quantum>` | entier (ms) | Quantum pour Round Robin (défaut : `50`). |
-| `-o <fichier>` | chemin `.csv` | Nom du fichier CSV de sortie (défaut : auto). |
-| `-g` | — | Afficher le diagramme de Gantt ASCII. |
-| `-i` | — | IHM ncurses interactive (nécessite ncurses). |
-| `-P` | — | Générer les graphiques PNG (nécessite Python + matplotlib). |
-| `-S` | — | Mode E/S séquentielles (non parallélisables). |
-| `-v` | — | Mode verbeux (liste les processus chargés). |
+| `-a <algo>` | `fifo` `sjf` `srjf` `rr` | **Obligatoire.** Choix de l'algorithme d'ordonnancement. |
+| `-f <fichier>` | chemin `.sim` | Charger les processus depuis un fichier au lieu de la ligne de commande. |
+| `-q <quantum>` | entier (ms) | Durée du quantum pour Round Robin (défaut : `50`). |
+| `-o <fichier>` | chemin `.csv` | Nom du fichier CSV de sortie (défaut : généré automatiquement). |
+| `-g` | — | Afficher le diagramme de Gantt ASCII dans le terminal. |
+| `-G` | — | Ouvrir l'interface graphique GTK4 (nécessite GTK4). |
+| `-P` | — | Générer des graphiques PNG (nécessite Python + matplotlib). |
+| `-S` | — | Mode E/S séquentielles : les entrées/sorties bloquent le CPU. |
+| `-v` | — | Mode verbeux : affiche la liste des processus chargés avant la simulation. |
 | `-l` | — | Lister les algorithmes disponibles et quitter. |
 | `-h` | — | Afficher l'aide et quitter. |
 
-> Le quantum spécifié dans un fichier `.sim` (directive `quantum`) prend la priorité sur `-q` si `-q` n'est pas explicitement passé.
+> Si votre fichier `.sim` contient une directive `quantum`, elle prend la priorité sur `-q` — sauf si vous passez `-q` explicitement.
 
 ---
 
 ## 6. Format du fichier `.sim`
 
-Les fichiers `.sim` sont des fichiers texte décrivant un jeu de processus. Ils se placent typiquement dans `tests/sample_inputs/`.
+Un fichier `.sim` est un fichier texte qui décrit un jeu de processus à simuler. C'est comme une "partition" : vous décrivez chaque processus, ses rafales CPU, ses pauses E/S, son heure d'arrivée. Placez vos fichiers dans `tests/sample_inputs/`.
 
 ### Syntaxe complète
 
@@ -172,9 +180,9 @@ Les fichiers `.sim` sont des fichiers texte décrivant un jeu de processus. Ils 
 quantum <valeur_ms>          # Optionnel — défaut 50
 
 process <pid> "<nom>" arrival=<ms> priority=<n>
-    burst cpu=<ms> io=<ms>   # Burst CPU suivi d'une E/S
+    burst cpu=<ms> io=<ms>   # Une rafale CPU suivie d'une pause E/S
     burst cpu=<ms> io=<ms>   # Autant de bursts que nécessaire
-    burst cpu=<ms>           # Dernier burst : pas d'io=
+    burst cpu=<ms>           # Dernier burst : pas d'io= (le processus se termine)
 end
 ```
 
@@ -183,11 +191,13 @@ end
 | Champ | Obligatoire | Défaut |
 |---|---|---|
 | `quantum` | Non | `50` ms |
-| `arrival=` | Non | `0` ms |
+| `arrival=` | Non | `0` ms (arrive dès le début) |
 | `priority=` | Non | `0` |
-| `io=` sur un burst | Non | `0` (pas d'E/S) |
+| `io=` sur un burst | Non | `0` (pas d'E/S après ce burst) |
 
-### Exemple : `basic.sim`
+### Exemple minimal : `basic.sim`
+
+Trois processus qui ne font que du CPU. Parfait pour tester FIFO, SJF et RR.
 
 ```
 # 3 processus sans E/S — validation FIFO/SJF/RR
@@ -206,7 +216,9 @@ process 3 "P3_Long" arrival=0 priority=3
 end
 ```
 
-### Exemple : `io_heavy.sim`
+### Exemple complet : `io_heavy.sim`
+
+Quatre processus qui alternent CPU et E/S, avec des arrivées décalées.
 
 ```
 # 4 processus avec cycles E/S parallélisées
@@ -246,7 +258,12 @@ end
 | `srjf` | Shortest Remaining Job First | **Oui** | — |
 | `rr` | Round Robin | **Oui** | Oui (`-q`) |
 
-Lister les algorithmes à l'exécution :
+- **FIFO** : les processus s'exécutent dans l'ordre d'arrivée, jusqu'à la fin. Simple mais injuste pour les longs processus.
+- **SJF** : le processus avec le burst CPU le plus court passe en premier. Optimal pour le temps d'attente moyen, mais peut affamer les longs processus.
+- **SRJF** : version préemptive de SJF — si un nouveau processus plus court arrive, il prend la main immédiatement.
+- **RR** : chaque processus reçoit un quantum de temps fixe, puis cède le CPU au suivant. Équitable, mais le choix du quantum est crucial.
+
+Pour voir la liste des algorithmes disponibles à l'exécution :
 
 ```bash
 ./scheduler -l
@@ -256,9 +273,11 @@ Lister les algorithmes à l'exécution :
 
 ## 8. Sorties produites
 
-### Table des métriques (terminal)
+Après chaque simulation, trois types de sorties sont disponibles.
 
-Affichée automatiquement à la fin de chaque simulation. Format aligné en colonnes, compatible copier-coller dans un tableur.
+### Table des métriques (toujours affichée)
+
+Le simulateur affiche automatiquement un tableau dans le terminal à la fin de chaque simulation. Il est aligné en colonnes pour pouvoir être copié-collé directement dans un tableur.
 
 ```
 Algorithme : Round Robin  |  Quantum : 50 ms  |  Processus : 4
@@ -274,19 +293,21 @@ MOY                                   ...      ...     ...
 Utilisation CPU : 87.3 %
 ```
 
-### Diagramme de Gantt ASCII (`-g`)
+### Diagramme de Gantt ASCII (option `-g`)
 
-```
+Un diagramme de Gantt montre la timeline de chaque processus : quand il utilise le CPU, quand il attend, quand il fait des E/S. C'est la meilleure façon de visualiser le comportement de l'ordonnanceur.
+
+```bash
 ./scheduler -a rr -q 50 -g -f tests/sample_inputs/io_heavy.sim
 ```
 
 Produit une ligne de timeline par processus dans le terminal, avec les états CPU, IDLE et BLOCKED visibles.
 
-### Fichier CSV (automatique)
+### Fichier CSV (toujours généré)
 
-Un fichier CSV est **toujours généré** après une simulation réussie. Le nom par défaut est `<ALGO>_<AAAAMMJJ>_<HHMMSS>.csv` (ex: `RR_20260402_141617.csv`).
+Un fichier CSV est **toujours créé** après une simulation réussie. Le nom par défaut suit le format `<ALGO>_<AAAAMMJJ>_<HHMMSS>.csv` (ex: `RR_20260402_141617.csv`).
 
-Pour spécifier un nom explicite :
+Pour choisir le nom vous-même :
 
 ```bash
 ./scheduler -a rr -f tests/sample_inputs/io_heavy.sim -o resultats_rr.csv
@@ -304,40 +325,43 @@ pid,name,arrival_ms,finish_ms,turnaround_ms,wait_ms,response_ms
 MOY,,,,350,245,18
 ```
 
-### IHM ncurses interactive (`-i`)
+### Interface graphique GTK4 (option `-G`)
 
-Requiert la compilation avec ncurses. Affiche un Gantt coloré et le tableau de métriques. Navigation :
+Si vous avez compilé avec GTK4, cette option ouvre une fenêtre native avec :
 
-- `q` : quitter
-- Flèches directionnelles : faire défiler si la timeline dépasse la largeur du terminal
+- **Panneau gauche** : résumé de la simulation (algorithme, quantum, métriques moyennes, taux CPU).
+- **Panneau droit haut** : diagramme de Gantt dessiné avec Cairo (CPU en vert, E/S en orange, IDLE en gris).
+- **Panneau droit bas** : tableau de métriques scrollable par processus.
+
+Le programme attend que vous fermiez la fenêtre avant de rendre la main au terminal.
 
 ---
 
 ## 9. Génération des graphiques
 
-Deux modes sont disponibles.
+Vous pouvez générer des graphiques PNG à partir des résultats de simulation. Deux modes sont disponibles.
 
-### Mode automatique (`-P`)
+### Mode immédiat (`-P`)
 
-Génère les PNG immédiatement après la simulation :
+Génère les PNG directement après la simulation :
 
 ```bash
 ./scheduler -a rr -q 50 -g -P -f tests/sample_inputs/io_heavy.sim
 ```
 
-Produit dans le répertoire courant :
+Produit dans le dossier courant :
 - `RR_<timestamp>_gantt.png` — diagramme de Gantt horizontal
 - `RR_<timestamp>_metrics.png` — barres groupées (turnaround / attente / réponse)
 
 ### Mode différé (`make plot`)
 
-Sur un CSV existant :
+Si vous avez déjà un CSV et que vous voulez juste générer les graphiques :
 
 ```bash
 make plot CSV=RR_20260402_141617.csv
 ```
 
-### Dépendances Python
+### Dépendance Python requise
 
 ```bash
 pip3 install matplotlib
@@ -347,11 +371,13 @@ pip3 install matplotlib
 
 ## 10. Documentation Doxygen
 
+Doxygen lit les commentaires du code source et génère une documentation HTML navigable — pratique pour comprendre l'architecture du projet sans lire tout le code.
+
 ```bash
 make doc
 ```
 
-La documentation HTML est générée dans `docs/`. Ouvrez `docs/html/index.html` dans un navigateur.
+La documentation est générée dans `docs/`. Ouvrez ensuite `docs/html/index.html` dans votre navigateur.
 
 > Requiert `doxygen` installé sur le système.
 
@@ -359,11 +385,11 @@ La documentation HTML est générée dans `docs/`. Ouvrez `docs/html/index.html`
 
 ## 11. Ajouter un algorithme
 
-L'architecture repose sur une **vtable de pointeurs de fonctions** (`struct Scheduler`). Ajouter un algorithme ne nécessite de modifier qu'**un seul fichier existant** après la création du nouveau module.
+Le simulateur est conçu pour accueillir facilement de nouveaux algorithmes. L'architecture repose sur une **vtable** (un ensemble de pointeurs de fonctions dans une struct `Scheduler`) : chaque algorithme implémente les mêmes "hooks" (admit, pick_next, on_yield…), et le moteur de simulation les appelle sans savoir quel algorithme tourne. Ajouter un algorithme ne nécessite de modifier **qu'un seul fichier existant**.
 
 ### Étape 1 — Créer `src/algorithms/mon_algo.c`
 
-Implémenter la fonction d'initialisation qui remplit la vtable :
+Implémentez les hooks et la fonction d'initialisation qui remplit la vtable :
 
 ```c
 #include "scheduler.h"
@@ -395,7 +421,7 @@ void mon_algo_init(Scheduler *s, uint32_t quantum_ms)
 
 ### Étape 2 — Enregistrer dans `src/scheduler.c`
 
-Ajouter une entrée dans le tableau `scheduler_registry[]` :
+Ajoutez une entrée dans le tableau `scheduler_registry[]` — c'est le seul fichier existant à modifier :
 
 ```c
 extern void mon_algo_init(Scheduler *s, uint32_t quantum_ms);
@@ -430,10 +456,10 @@ make clean && make
 
 ## 12. Nettoyage
 
-| Commande | Effet |
-|---|---|
-| `make clean` | Supprime `build/` et l'exécutable `scheduler` |
-| `make distclean` | `clean` + supprime `docs/` |
+| Commande | Quand l'utiliser | Effet |
+|---|---|---|
+| `make clean` | Avant un rebuild propre, ou pour libérer de l'espace | Supprime `build/` et l'exécutable `scheduler` |
+| `make distclean` | Avant de livrer ou archiver le projet | `clean` + supprime aussi `docs/` |
 
 ---
 

@@ -27,7 +27,7 @@ L'architecture repose sur une **vtable de pointeurs de fonctions** : ajouter un 
 
 ## Compilation
 
-**Prérequis :** `gcc` >= 9, `make`. Optionnels : `libncurses-dev` (IHM interactive), `doxygen` (documentation), `python3` + `matplotlib` (graphiques PNG).
+**Prérequis :** `gcc` >= 9, `make`. Optionnels : `gtk4` (IHM desktop), `doxygen` (documentation), `python3` + `matplotlib` (graphiques PNG).
 
 ```bash
 make          # build de production
@@ -71,7 +71,7 @@ Chaque argument positionnel est un processus, au format `"cpu_ms,io_ms,cpu_ms,..
 | `-f <fichier>` | Charger les processus depuis un fichier `.sim` |
 | `-q <ms>` | Quantum pour Round Robin (défaut : 50 ms) |
 | `-g` | Afficher le diagramme de Gantt ASCII |
-| `-i` | IHM ncurses interactive (nécessite ncurses) |
+| `-G` | IHM desktop GTK4 (nécessite GTK4) |
 | `-P` | Générer les graphiques PNG (nécessite Python + matplotlib) |
 | `-S` | E/S séquentielles (non parallélisables) |
 | `-o <fichier>` | Nom du fichier CSV de sortie |
@@ -86,7 +86,7 @@ Chaque argument positionnel est un processus, au format `"cpu_ms,io_ms,cpu_ms,..
 - **Fichier CSV** généré automatiquement après chaque simulation (`<ALGO>_<timestamp>.csv`)
 - **Diagramme de Gantt ASCII** avec `-g`
 - **Graphiques PNG** avec `-P` (diagramme de Gantt + barres de métriques)
-- **IHM ncurses** avec `-i` (Gantt coloré interactif)
+- **IHM desktop GTK4** avec `-G` (fenêtre native : Gantt coloré Cairo + tableau métriques)
 
 ---
 
@@ -108,7 +108,7 @@ file-OS/
 │   ├── metrics.c           # Calcul des indicateurs de performance
 │   ├── input.c             # Lecture CLI et fichiers .sim
 │   ├── output.c            # Affichage terminal et export CSV
-│   └── output_ncurses.c    # IHM interactive (optionnel)
+│   └── output_gtk.c        # IHM desktop GTK4 (optionnel)
 ├── include/                # Headers (.h) de chaque module
 ├── tests/sample_inputs/    # Fichiers .sim d'exemple
 ├── tools/plot_results.py   # Génération de graphiques Python

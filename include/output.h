@@ -20,7 +20,7 @@ typedef struct {
     int         show_gantt;    /**< 1 = afficher le Gantt ASCII dans le terminal */
     int         show_table;    /**< 1 = afficher la table des métriques */
     const char *csv_path;      /**< Chemin du fichier CSV, ou NULL pour auto */
-    int         show_ncurses;  /**< 1 = IHM ncurses interactive (-i) */
+    int         show_gtk;      /**< 1 = IHM GTK4 native (-G) */
     int         auto_plot;     /**< 1 = générer les graphiques PNG via Python (-P) */
 } OutputConfig;
 
@@ -84,17 +84,5 @@ int output_write_csv(const MetricsReport *report, const char *path);
  * @param csv_path  Chemin du fichier CSV à traiter.
  */
 void output_plot(const char *csv_path);
-
-/**
- * @brief Lance l'IHM ncurses interactive (si compilé avec HAVE_NCURSES).
- *
- * Affiche un diagramme de Gantt coloré et le tableau de métriques.
- * Navigation : q = quitter, flèches = défiler si dépassement.
- *
- * @param sim     Simulation terminée.
- * @param report  Rapport de métriques.
- */
-void output_ncurses_render(const SimulationState *sim,
-                           const MetricsReport   *report);
 
 #endif /* OUTPUT_H */

@@ -16,18 +16,18 @@ RELFLAGS = -O2 -DNDEBUG
 DBGFLAGS = -g3 -DDEBUG -fsanitize=address,undefined
 LDFLAGS  =
 
-# ---- Détection ncurses (optionnel — active l'IHM interactive -i) ----
-NCURSES_CFLAGS := $(shell pkg-config --cflags ncurses 2>/dev/null || echo "")
-NCURSES_LIBS   := $(shell pkg-config --libs   ncurses 2>/dev/null || echo "-lncurses")
-NCURSES_OK     := $(shell printf '\#include <ncurses.h>\nint main(void){return 0;}' \
-                    | $(CC) -x c - $(NCURSES_CFLAGS) $(NCURSES_LIBS) -o /dev/null \
-                    2>/dev/null && echo 1 || echo 0)
-ifeq ($(NCURSES_OK),1)
-    CFLAGS  += $(NCURSES_CFLAGS) -DHAVE_NCURSES
-    LDFLAGS += $(NCURSES_LIBS)
-    $(info [ncurses] détecté — option -i activée)
+# ---- Détection GTK4 (optionnel — active la fenêtre desktop -G) ----
+GTK4_CFLAGS := $(shell pkg-config --cflags gtk4 2>/dev/null || echo "")
+GTK4_LIBS   := $(shell pkg-config --libs   gtk4 2>/dev/null || echo "")
+GTK4_OK     := $(shell printf '\#include <gtk/gtk.h>\nint main(void){return 0;}' \
+                 | $(CC) -x c - $(GTK4_CFLAGS) $(GTK4_LIBS) -o /dev/null \
+                 2>/dev/null && echo 1 || echo 0)
+ifeq ($(GTK4_OK),1)
+    CFLAGS  += $(GTK4_CFLAGS) -DHAVE_GTK4
+    LDFLAGS += $(GTK4_LIBS)
+    $(info [gtk4]    détecté — option -G activée)
 else
-    $(info [ncurses] non détecté — option -i désactivée (installez libncurses-dev))
+    $(info [gtk4]    non détecté — option -G désactivée (brew install gtk4))
 endif
 
 # Répertoires
@@ -50,9 +50,9 @@ SRCS = $(SRC_DIR)/main.c             \
        $(SRC_DIR)/algorithms/srjf.c  \
        $(SRC_DIR)/algorithms/round_robin.c
 
-# output_ncurses.c compilé seulement si ncurses est détecté
-ifeq ($(NCURSES_OK),1)
-    SRCS += $(SRC_DIR)/output_ncurses.c
+# output_gtk.c compilé seulement si GTK4 est détecté
+ifeq ($(GTK4_OK),1)
+    SRCS += $(SRC_DIR)/output_gtk.c
 endif
 
 OBJS = $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o, $(SRCS))

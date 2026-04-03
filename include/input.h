@@ -36,7 +36,7 @@ typedef struct {
     int         show_gantt;    /**< 1 = afficher le Gantt ASCII, 0 = non */
     int         verbose;       /**< 1 = mode verbeux */
     int         sequential_io; /**< 1 = E/S non parallélisables (-S) */
-    int         show_ncurses;  /**< 1 = IHM ncurses interactive (-i) */
+    int         show_gtk;      /**< 1 = IHM GTK4 native (-G) */
     int         auto_plot;     /**< 1 = générer les graphiques PNG (-P) */
 } CLIConfig;
 

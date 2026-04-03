@@ -49,7 +49,7 @@ void cli_usage(const char *prog)
     printf("  -f <fichier>   Fichier d'entrée .sim\n");
     printf("  -o <fichier>   Chemin de sortie CSV (défaut : auto)\n");
     printf("  -g             Afficher le diagramme de Gantt ASCII\n");
-    printf("  -i             IHM ncurses interactive (si disponible)\n");
+    printf("  -G             IHM GTK4 native (fenêtre desktop, si disponible)\n");
     printf("  -P             Générer les graphiques PNG via Python\n");
     printf("  -S             E/S non parallélisables (device unique)\n");
     printf("  -v             Mode verbeux\n");
@@ -93,8 +93,8 @@ int cli_parse(int argc, char **argv, CLIConfig *cfg)
             cfg->csv_output = argv[++i];
         } else if (strcmp(argv[i], "-g") == 0) {
             cfg->show_gantt = 1;
-        } else if (strcmp(argv[i], "-i") == 0) {
-            cfg->show_ncurses = 1;
+        } else if (strcmp(argv[i], "-G") == 0) {
+            cfg->show_gtk = 1;
         } else if (strcmp(argv[i], "-P") == 0) {
             cfg->auto_plot = 1;
         } else if (strcmp(argv[i], "-S") == 0) {
